@@ -133,7 +133,7 @@ while(True):
                         print(f'voltage = {output_voltage:0.2f} ', end = '')
                         print(f'frequency = {frequency:0.2f} ', end = '')
                         print(f'battery voltage = {battery_voltage:0.2f} ', end = '')
-                        print(f'temperature = {temperature:0.1f}, humidity = {humidity:0.1f}')
+                        print(f'temperature = {temperature:0.1f} humidity = {humidity:0.1f}')
                     except:
                         pass
 
