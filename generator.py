@@ -9,7 +9,7 @@ import numpy as np
 #============================================================================
 # Global variables
 
-version = 2
+version = 4
 
 BAUDRATE = 115200
 
@@ -45,7 +45,7 @@ def get_temperature(bus):
 
 # Write two HTML pages, one standard for viewing on laptops etc, and one mobile
 # for phones etc. The difference is size. See path variable.
-def write_html(output_voltage, frequency, battery_voltage, temperature, humidity):
+def write_html(output_voltage, frequency, power, battery_voltage, temperature, humidity):
     for layout in [STANDARD, MOBILE]:
         if layout == STANDARD:
             path = '/var/www/html/index.html'
@@ -79,6 +79,10 @@ def write_html(output_voltage, frequency, battery_voltage, temperature, humidity
             html.write(f'    <td>{frequency:0.2f}\n')
             html.write( '  </tr>\n')
             html.write( '  <tr>\n')
+            html.write( '    <td>Power, watts</td>\n')
+            html.write(f'    <td>{power:0.2f}\n')
+            html.write( '  </tr>\n')
+            html.write( '  <tr>\n')
             html.write( '    <td>Battery Voltage</td>\n')
             html.write(f'    <td>{battery_voltage:0.2f}\n')
             html.write( '  </tr>\n')
@@ -100,10 +104,12 @@ def write_html(output_voltage, frequency, battery_voltage, temperature, humidity
 
 receive_state = IDLE
 
+print(f'generator version {version}')
+
 try:
     serial_port = serial.Serial(port = "/dev/ttyAMA0", baudrate = BAUDRATE, timeout = 0)
 except serial.SerialException as e:
-    print('Serial port open failed; {e}')
+    print('Serial port open failed: {e}')
 
 i2c_bus = init_I2C()
 line = ''
@@ -128,10 +134,14 @@ while(True):
                     try:
                         output_voltage = float(parameter_text[0])
                         frequency = float(parameter_text[1])
-                        battery_voltage = float(parameter_text[2])
-                        write_html(output_voltage, frequency, battery_voltage, temperature, humidity)
+                        current = float(parameter_text[2])
+                        power = output_voltage * current
+                        battery_voltage = float(parameter_text[3])
+                        write_html(output_voltage, frequency, power, battery_voltage, temperature, humidity)
                         print(f'voltage = {output_voltage:0.2f} ', end = '')
+                        print(f'current = {current:0.2f} ', end = '')
                         print(f'frequency = {frequency:0.2f} ', end = '')
+                        print(f'power = {power:0.2f} ', end = '')
                         print(f'battery voltage = {battery_voltage:0.2f} ', end = '')
                         print(f'temperature = {temperature:0.1f} humidity = {humidity:0.1f}')
                     except:
