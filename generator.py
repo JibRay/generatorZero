@@ -34,7 +34,21 @@ def init_I2C():
     bus = smbus.SMBus(1)
     return bus
 
-# Return temperature in celcius and relative humidity as a tuple.
+def write_log(message):
+    t = datetime.datetime.utcnow()
+    time_stamp = \
+        f'{t.year}-{t.month:02d}-{t.day:02d}-{t.hour:02d}-{t.minute:02d}-{t.second:02d}.{t.microsecond:06d} utc: '
+    entry = time_stamp + message + '\n'
+    with open('/home/pi/Documents/generator.log', 'a') as log_file:
+        log_file.write(entry)
+    log_file.close()
+
+def log_values(output_voltage, frequency, power, battery_voltage, temperature, humidity):
+    message = \
+        f'voltage = {output_voltage:0.2f} frequency = {frequency:0.2f} power(W) = {power:0.1f} battery voltage = {battery_voltage:0.2f} temperature(C) = {temperature:0.1f} humidity = {humidity:0.1f}'
+    write_log(message)
+
+# Return temperature in celcius and % relative humidity as a tuple.
 def get_temperature(bus):
     bus.write_i2c_block_data(I2C_ADDRESS, I2C_MEASURE, [I2C_HIGH_REPEATABILITY])
     time.sleep(0.5)
@@ -104,7 +118,11 @@ def write_html(output_voltage, frequency, power, battery_voltage, temperature, h
 
 receive_state = IDLE
 
+t = datetime.datetime.utcnow()
+prev_hour = t.hour
+
 print(f'generator version {version}')
+write_log(f'generator version {version}')
 
 try:
     serial_port = serial.Serial(port = "/dev/ttyAMA0", baudrate = BAUDRATE, timeout = 0)
@@ -135,15 +153,30 @@ while(True):
                         output_voltage = float(parameter_text[0])
                         frequency = float(parameter_text[1])
                         current = float(parameter_text[2])
+                        if output_voltage < 2.0:
+                            output_voltage = 0.0
+                        if current < 0.5:
+                            current = 0.0
                         power = output_voltage * current
                         battery_voltage = float(parameter_text[3])
+
                         write_html(output_voltage, frequency, power, battery_voltage, temperature, humidity)
+
                         print(f'voltage = {output_voltage:0.2f} ', end = '')
                         print(f'current = {current:0.2f} ', end = '')
                         print(f'frequency = {frequency:0.2f} ', end = '')
                         print(f'power = {power:0.2f} ', end = '')
                         print(f'battery voltage = {battery_voltage:0.2f} ', end = '')
                         print(f'temperature = {temperature:0.1f} humidity = {humidity:0.1f}')
+
+                        t = datetime.datetime.utcnow()
+                        if output_voltage > 100.0:
+                            log_values(output_voltage, frequency, power, battery_voltage, temperature, humidity)
+                            prev_hour = t.hour
+                        elif t.hour != prev_hour:
+                            log_values(output_voltage, frequency, power, battery_voltage, temperature, humidity)
+                            prev_hour = t.hour
+
                     except:
                         pass
 
